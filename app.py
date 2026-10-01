@@ -37,7 +37,21 @@ lokal = search_serper("tiktok viral Indonesia hari ini Oktober 2026")
 global_trend = search_serper("tiktok viral global today USA trends")
 
 prompt = f"""
-Kamu Divisi Trend. Data Lokal:\n{lokal}\n\nData Global:\n{global_trend}\n\nBuat laporan Telegram: Top 5 Trend Hari Ini, 2 Prediksi Global yang bakal masuk Indo, 3 Ide Konten (Hook, Format, Sound, CTA). Bahasa Indonesia.
+Kamu adalah Divisi Trend Personal Branding Edukasi di Mataram.
+
+DATA LOKAL (Indonesia):
+{lokal}
+
+DATA GLOBAL:
+{global_trend}
+
+TUGAS:
+1. Saring hanya trend yang relevan untuk edukasi/personal branding, BUKAN playlist musik umum.
+2. WAJIB sebutkan minimal: sound Timur (Tabola Bale/Ambon Manise) kalau masih di FYP, format Swipe ALYPH, dan momen Hari Kesaktian Pancasila kalau masih 1-7 Okt.
+3. Prediksi 2 trend global (Ramalama Walk / ATEEZ BAD / format hold it down) yang bakal masuk Indo.
+4. 3 ide konten dengan struktur: Hook 3 detik, Format Video (15-30 detik), Sound yang dipakai, CTA komen.
+
+Output harus Markdown Telegram, jangan pakai tabel yang lebar, pakai bullet list. Bahasa Indonesia gaul Mataram.
 """
 
 # DAFTAR MODEL YANG MASIH HIDUP DI GROQ 2026
