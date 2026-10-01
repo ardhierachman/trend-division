@@ -56,8 +56,8 @@ Output harus Markdown Telegram, jangan pakai tabel yang lebar, pakai bullet list
 
 # DAFTAR MODEL YANG MASIH HIDUP DI GROQ 2026
 MODELS = [
-    "openai/gpt-oss-20b", # paling gratis & stabil sekarang
     "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b", # paling gratis & stabil sekarang
     "llama-3.1-8b-instant",
     "llama-3.3-70b-versatile",
     "llama3-8b-8192",
