@@ -36,7 +36,7 @@ scout_global = Agent(
     role='Trend Scout Internasional',
     goal='Cari 3 trend internasional yang belum masuk Indonesia',
     backstory='Kamu pantau TikTok US, Reels US, YouTube Shorts global',
-    tools=[WebsiteSearchTool()],
+    tools=[SerperDevTool()],
     llm=groq_llm,
     verbose=True
 )
