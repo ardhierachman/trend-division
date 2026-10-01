@@ -1,2 +1,4 @@
-crewai
-[STRIPPED 67 bytes]
+python-dotenv
+requests
+pytrends
+groq
