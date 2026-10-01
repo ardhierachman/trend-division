@@ -1,5 +1,6 @@
 crewai
 crewai-tools
+litellm
 python-dotenv
 requests
 pytrends
