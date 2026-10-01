@@ -1,7 +1,7 @@
 import os
 import requests
 from crewai import Agent, Task, Crew, LLM
-from crewai_tools import SerperDevTool, WebsiteSearchTool
+from crewai_tools import SerperDevTool
 from dotenv import load_dotenv
 
 load_dotenv()
