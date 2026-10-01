@@ -1,85 +1,70 @@
 import os
 import requests
-from crewai import Agent, Task, Crew, LLM
-from crewai_tools import SerperDevTool
+from groq import Groq
 from dotenv import load_dotenv
-
 load_dotenv()
 
-# --- LLM GROQ yang benar ---
-groq_llm = LLM(
-    model="groq/llama-3.1-8b-instant",
-    api_key=os.getenv("GROQ_API_KEY"),
-    drop_params=True,
-    additional_drop_params=["cache_breakpoint"]
-)
-
-# --- TOOLS ---
 def send_telegram(text):
     token = os.getenv("BOT_TOKEN")
     chat_id = os.getenv("CHAT_ID")
     if not token or not chat_id:
-        print("BOT_TOKEN / CHAT_ID belum diisi")
+        print("BOT_TOKEN/CHAT_ID kosong")
         return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
+    # Telegram max 4000 char
     requests.post(url, json={"chat_id": chat_id, "text": text[:4000], "parse_mode": "Markdown"})
 
-# --- 3 AGENT ---
-scout_lokal = Agent(
-    role='Trend Scout Indonesia',
-    goal='Cari 5 trend TikTok & Reels viral Indonesia hari ini',
-    backstory='Kamu ahli TikTok Creative Center Indonesia',
-    tools=[SerperDevTool()],
-    llm=groq_llm,
-    verbose=True
+def search_serper(query):
+    key = os.getenv("SERPER_API_KEY")
+    if not key:
+        return "Serper key kosong"
+    try:
+        r = requests.post(
+            "https://google.serper.dev/search",
+            headers={"X-API-KEY": key, "Content-Type": "application/json"},
+            json={"q": query, "gl": "id", "hl": "id", "num": 5},
+            timeout=20
+        )
+        data = r.json()
+        results = []
+        for item in data.get("organic", [])[:5]:
+            results.append(f"- {item.get('title')}: {item.get('snippet')}")
+        return "\n".join(results)
+    except Exception as e:
+        return f"Search error: {e}"
+
+# --- MAIN ---
+print("=== DIVISI TREND LIGHT MODE START ===")
+
+groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+lokal = search_serper("tiktok viral Indonesia hari ini Oktober 2026")
+global_trend = search_serper("tiktok viral global today USA trends")
+
+prompt = f"""
+Kamu adalah Divisi Trend untuk Personal Branding Edukasi.
+
+Data Lokal:
+{lokal}
+
+Data Global:
+{global_trend}
+
+Buat laporan Telegram (pakai Markdown rapi):
+1. Top 5 Trend TikTok/Reels Hari Ini (Indonesia)
+2. Prediksi 2 Trend Internasional yang akan masuk Indonesia + alasan kenapa cocok
+3. 3 Ide Konten 3 Hari Ke Depan (Hook, Format Video, Sound/Ref, CTA)
+
+Bahasa Indonesia santai, to-the-point.
+"""
+
+response = groq_client.chat.completions.create(
+    model="llama-3.1-8b-instant",
+    messages=[{"role": "user", "content": prompt}],
+    temperature=0.7
 )
 
-scout_global = Agent(
-    role='Trend Scout Internasional',
-    goal='Cari 3 trend internasional yang belum masuk Indonesia',
-    backstory='Kamu pantau TikTok US, Reels US, YouTube Shorts global',
-    tools=[SerperDevTool()],
-    llm=groq_llm,
-    verbose=True
-)
-
-strategist = Agent(
-    role='Content Strategist Personal Branding Edukasi',
-    goal='Prediksi trend dan bikin 3 ide konten',
-    backstory='Kamu strategist niche personal branding / edukasi',
-    llm=groq_llm,
-    verbose=True
-)
-
-# --- TASK ---
-task1 = Task(
-    description='Riset trend lokal hari ini. Cari "tiktok viral indonesia hari ini". Hasil: list 5 trend dengan sound & hashtag.',
-    agent=scout_lokal,
-    expected_output='List 5 trend lokal'
-)
-
-task2 = Task(
-    description='Riset trend internasional hari ini. Cari "tiktok viral global today". Hasil: list 3 trend.',
-    agent=scout_global,
-    expected_output='List 3 trend global'
-)
-
-task3 = Task(
-    description='''
-    Berdasarkan hasil 2 scout, buat laporan akhir untuk Telegram (Markdown):
-    1. Ringkasan diskusi divisi
-    2. Top 5 Trend Hari Ini
-    3. Prediksi 2 trend internasional yang akan diadaptasi di Indonesia (kenapa cocok)
-    4. Ide konten 3 hari ke depan untuk personal branding edukasi, format: Hook, Format Video, Sound/Ref, CTA
-    ''',
-    agent=strategist,
-    expected_output='Laporan lengkap siap kirim Telegram'
-)
-
-crew = Crew(agents=[scout_lokal, scout_global, strategist], tasks=[task1, task2, task3])
-
-if __name__ == "__main__":
-    print("=== DIVISI TREND MULAI DISKUSI ===")
-    result = crew.kickoff()
-    print(result)
-    send_telegram(str(result))
+laporan = response.choices[0].message.content
+print(laporan)
+send_telegram(laporan)
+print("=== SELESAI, TELEGRAM TERKIRIM ===")
