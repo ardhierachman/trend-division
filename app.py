@@ -1,66 +1,83 @@
 import os
-from crewai import Agent, Task, Crew
-from crewai_tools import SerperDevTool, WebsiteSearchTool
-from pytrends.request import TrendReq
 import requests
+from crewai import Agent, Task, Crew, LLM
+from crewai_tools import SerperDevTool, WebsiteSearchTool
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# --- TOOLS GRATISAN ---
-def get_google_trends():
-    pytrends = TrendReq(hl='id-ID', tz=480)
-    trending = pytrends.trending_searches(pn='indonesia')
-    return trending.head(5).to_string()
+# --- LLM GROQ yang benar ---
+groq_llm = LLM(
+    model="groq/llama-3.1-8b-instant",
+    api_key=os.getenv("GROQ_API_KEY")
+)
 
+# --- TOOLS ---
 def send_telegram(text):
     token = os.getenv("BOT_TOKEN")
     chat_id = os.getenv("CHAT_ID")
+    if not token or not chat_id:
+        print("BOT_TOKEN / CHAT_ID belum diisi")
+        return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    requests.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"})
-    print("Terkirim ke Telegram!")
+    requests.post(url, json={"chat_id": chat_id, "text": text[:4000], "parse_mode": "Markdown"})
 
-# --- 3 AGENT DIVISI ---
+# --- 3 AGENT ---
 scout_lokal = Agent(
     role='Trend Scout Indonesia',
-    goal='Cari 5 trend TikTok & Reels yang lagi viral di Indonesia hari ini',
-    backstory='Kamu ahli TikTok Creative Center Indonesia, tau sound, hashtag, dan format yang naik.',
+    goal='Cari 5 trend TikTok & Reels viral Indonesia hari ini',
+    backstory='Kamu ahli TikTok Creative Center Indonesia',
     tools=[SerperDevTool()],
-    llm='groq/llama-3.1-8b-instant'
+    llm=groq_llm,
+    verbose=True
 )
 
 scout_global = Agent(
     role='Trend Scout Internasional',
     goal='Cari 3 trend internasional yang belum masuk Indonesia',
-    backstory='Kamu pantau TikTok US, Reels US, YouTube Shorts global.',
+    backstory='Kamu pantau TikTok US, Reels US, YouTube Shorts global',
     tools=[WebsiteSearchTool()],
-    llm='groq/llama-3.1-8b-instant'
+    llm=groq_llm,
+    verbose=True
 )
 
 strategist = Agent(
     role='Content Strategist Personal Branding Edukasi',
-    goal='Prediksi trend global yang akan masuk Indonesia dan bikin 3 ide konten edukasi',
-    backstory='Kamu strategist untuk niche personal branding/edukasi. Kamu jago ubah trend joget jadi konten value.',
-    llm='groq/llama-3.1-8b-instant'
+    goal='Prediksi trend dan bikin 3 ide konten',
+    backstory='Kamu strategist niche personal branding / edukasi',
+    llm=groq_llm,
+    verbose=True
 )
 
-# --- TASK (JADWAL KERJA) ---
-task1 = Task(description='Riset trend lokal hari ini. Gunakan tool search untuk "tiktok viral indonesia hari ini" dan Google Trends. Hasil: list 5 trend.', agent=scout_lokal)
-task2 = Task(description='Riset trend internasional. Cari "tiktok viral global today". Hasil: list 3 trend.', agent=scout_global)
+# --- TASK ---
+task1 = Task(
+    description='Riset trend lokal hari ini. Cari "tiktok viral indonesia hari ini". Hasil: list 5 trend dengan sound & hashtag.',
+    agent=scout_lokal,
+    expected_output='List 5 trend lokal'
+)
+
+task2 = Task(
+    description='Riset trend internasional hari ini. Cari "tiktok viral global today". Hasil: list 3 trend.',
+    agent=scout_global,
+    expected_output='List 3 trend global'
+)
+
 task3 = Task(
     description='''
-    Berdasarkan hasil 2 scout, buat laporan akhir:
-    1. Ringkasan diskusi (seolah 3 agent ngobrol)
+    Berdasarkan hasil 2 scout, buat laporan akhir untuk Telegram (Markdown):
+    1. Ringkasan diskusi divisi
     2. Top 5 Trend Hari Ini
-    3. Prediksi 2 trend internasional yang akan diadaptasi di Indonesia (jelaskan kenapa cocok)
-    4. Ide konten 3 hari ke depan untuk personal branding edukasi, minimal 1 per hari dengan format: Hook, Format Video, Sound/Ref, CTA
-    Format untuk Telegram Markdown.
+    3. Prediksi 2 trend internasional yang akan diadaptasi di Indonesia (kenapa cocok)
+    4. Ide konten 3 hari ke depan untuk personal branding edukasi, format: Hook, Format Video, Sound/Ref, CTA
     ''',
-    agent=strategist
+    agent=strategist,
+    expected_output='Laporan lengkap siap kirim Telegram'
 )
 
 crew = Crew(agents=[scout_lokal, scout_global, strategist], tasks=[task1, task2, task3])
 
 if __name__ == "__main__":
+    print("=== DIVISI TREND MULAI DISKUSI ===")
     result = crew.kickoff()
+    print(result)
     send_telegram(str(result))
