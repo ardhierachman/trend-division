@@ -59,7 +59,7 @@ Bahasa Indonesia santai, to-the-point.
 """
 
 response = groq_client.chat.completions.create(
-    model="llama-3.1-8b-instant",
+    model="llama-3.3-70b-versatile",
     messages=[{"role": "user", "content": prompt}],
     temperature=0.7
 )
